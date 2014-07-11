@@ -3,11 +3,13 @@ package manning.bigdata.kafka;
 import com.backtype.hadoop.pail.Pail;
 import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
+import manning.bigdata.ch3.DataPailStructure;
 import manning.bigdata.swa.*;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 /**
@@ -21,6 +23,8 @@ public class ReadKafkaQueueAndWriteToHadoop implements Runnable {
     private final KafkaStream stream;
     private final int thread;
     private final String hdfsPath;
+    private Pail hadoopPail;
+    private Pail.TypedRecordOutputStream outputStream;
 
     public ReadKafkaQueueAndWriteToHadoop(KafkaStream stream, int thread, String hdfsPath) {
         this.stream = stream;
@@ -31,10 +35,17 @@ public class ReadKafkaQueueAndWriteToHadoop implements Runnable {
     @Override
     public void run() {
         ConsumerIterator<byte[], byte[]> it = stream.iterator();
+        try {
+            hadoopPail = Pail.create(hdfsPath, new DataPailStructure(), false );
+            outputStream = hadoopPail.openWrite();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         String messages = "";
         while (it.hasNext()) {
             messages = new String(it.next().message());
+            System.out.println("msg: " + messages);
             try {
                 writeToHadoop(messages);
             } catch (ParseException e) {
@@ -50,11 +61,16 @@ public class ReadKafkaQueueAndWriteToHadoop implements Runnable {
         Object obj = parser.parse(jsonMessages);
         JSONObject jsonObject = (JSONObject) obj;
         String messageType = (String) jsonObject.get("messagetype");
-        Pail hadoopPail = new Pail(hdfsPath);
-        Pail.TypedRecordOutputStream os = hadoopPail.openWrite();
 
+        //TODO:  workaround below; should be writing thrift object as follows here, but
+        //ClassCastException: manning.bigdata.swa.Data cannot be cast to [B
         Data data = decodeJsonMessage(jsonObject, messageType);
-        os.writeObject(data);
+        outputStream.writeObject(data);
+
+        //HACK:  REMOVE.
+        //byte[] bytes = jsonMessages.getBytes();
+        //os.writeObject(bytes);
+
     }
 
     private Data decodeJsonMessage(JSONObject jsonObject, String messageType) {
@@ -75,7 +91,7 @@ public class ReadKafkaQueueAndWriteToHadoop implements Runnable {
     private Data decodePage(JSONObject jsonObject) {
         String pedigree = (String) jsonObject.get("pedigree");
         String url = (String) jsonObject.get("url");
-        return null;  //To change body of created methods use File | Settings | File Templates.
+        return null;
     }
 
     private Data decodePerson(JSONObject jsonObject) {

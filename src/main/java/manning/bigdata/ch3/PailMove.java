@@ -38,14 +38,15 @@ import java.io.IOException;
 import java.util.*;
 
 public class PailMove {
-    public static final String TEMP_DIR = "/tmp/swa";
-    public static final String NEW_DATA_LOCATION = "/tmp/newData";
-    public static final String MASTER_DATA_LOCATION = "/tmp/masterData";
-    public static final String SNAPSHOT_LOCATION = "/tmp/swa/newDataSnapshot";
-    public static final String SHREDDED_DATA_LOCATION = "/tmp/swa/shredded";
-    public static final String NORMALIZED_URLS_LOCATION = "/tmp/swa/normalized_urls";
-    public static final String NORMALIZED_PAGEVIEW_LOCATION = "/tmp/swa/normalized_pageview_users";
-    public static final String UNIQUE_PAGEVIEW_LOCATION = "/tmp/swa/unique_pageviews";
+    public static final String HDFS_PATH = "hdfs://10.200.1.100:9000/";
+    public static final String TEMP_DIR = HDFS_PATH + "tmp2/swa";
+    public static final String NEW_DATA_LOCATION = HDFS_PATH + "tmp/newData" + Math.random();
+    public static final String MASTER_DATA_LOCATION = HDFS_PATH + "tmp/masterData";
+    public static final String SNAPSHOT_LOCATION = HDFS_PATH + "tmp2/swa2/newDataSnapshot" + Math.random();
+    public static final String SHREDDED_DATA_LOCATION = HDFS_PATH + "tmp2/swa2/shredded" + Math.random();
+    public static final String NORMALIZED_URLS_LOCATION = HDFS_PATH + "tmp2/swa2/normalized_urls" + Math.random();
+    public static final String NORMALIZED_PAGEVIEW_LOCATION = HDFS_PATH + "tmp2/swa2/normalized_pageview_users" + Math.random();
+    public static final String UNIQUE_PAGEVIEW_LOCATION = HDFS_PATH + "tmp2/swa2/unique_pageviews" + Math.random();
 
     public static void mergeData(String masterDir, String updateDir) throws IOException {
         Pail target = new Pail(masterDir);
@@ -55,7 +56,7 @@ public class PailMove {
     }
 
     public static void simpleIO() throws IOException {
-        Pail pail = Pail.create("/tmp/mypail");
+        Pail pail = Pail.create(HDFS_PATH + "tmp2/mypail");
         Pail.TypedRecordOutputStream os = pail.openWrite();
         os.writeObject(new byte[] {1,2,3});
         os.writeObject(new byte[] {1,2,3,4});
@@ -64,7 +65,7 @@ public class PailMove {
     }
 
 //    public static void writeLogins() throws IOException {
-//        Pail<Login> loginPail = Pail.create("/tmp/updates", new LoginPailStructure());
+//        Pail<Login> loginPail = Pail.create(HDFS_PATH + "tmp2/updates", new LoginPailStructure());
 //        Pail.TypedRecordOutputStream out = loginPail.openWrite();
 //        out.writeObject(new Login("charlie", 1352671234));
 //        out.writeObject(new Login("delta", 1352679456));
@@ -81,13 +82,13 @@ public class PailMove {
 //    }
 //
 //    public static void appendData() throws IOException {
-//        Pail<Login> loginPail = new Pail<Login>("/tmp/logins");
-//        Pail<Login> updatePail = new Pail<Login>("/tmp/updates");
+//        Pail<Login> loginPail = new Pail<Login>(HDFS_PATH + "tmp2/logins");
+//        Pail<Login> updatePail = new Pail<Login>(HDFS_PATH + "tmp2/updates");
 //        loginPail.absorb(updatePail);
 //    }
 //
 //    public static void partitionData() throws IOException {
-//        Pail<Login> pail = Pail.create("/tmp/partitioned_logins",
+//        Pail<Login> pail = Pail.create(HDFS_PATH + "tmp2/partitioned_logins",
 //                new PartitionedLoginPailStructure());
 //        Pail.TypedRecordOutputStream os = pail.openWrite();
 //        os.writeObject(new Login("chris", 1352702020));
@@ -100,7 +101,7 @@ public class PailMove {
 //        options.put(SequenceFileFormat.CODEC_ARG, SequenceFileFormat.CODEC_ARG_GZIP);
 //        options.put(SequenceFileFormat.TYPE_ARG, SequenceFileFormat.TYPE_ARG_BLOCK);
 //        LoginPailStructure struct = new LoginPailStructure();
-//        Pail compressed = Pail.create("/tmp/compressed", new PailSpec("SequenceFile", options, struct));
+//        Pail compressed = Pail.create(HDFS_PATH + "tmp2/compressed", new PailSpec("SequenceFile", options, struct));
 //    }
 
     public static void setApplicationConf() throws IOException {
@@ -109,19 +110,19 @@ public class PailMove {
         conf.put("io.serializations", sers);
         Api.setApplicationConf(conf);
 
-        FileSystem fs = FileSystem.get(new Configuration());
-        fs.delete(new Path(TEMP_DIR), true);
-        fs.mkdirs(new Path(TEMP_DIR));
+       // FileSystem fs = FileSystem.get(new Configuration());
+       // fs.delete(new Path(TEMP_DIR), true);
+       // fs.mkdirs(new Path(TEMP_DIR));
     }
 
     public static void ingest(Pail masterPail, Pail newDataPail) throws IOException {
         Pail snapshotPail = newDataPail.snapshot(SNAPSHOT_LOCATION);
         shred();
-        consolidateAndAbsord(masterPail, new Pail(SHREDDED_DATA_LOCATION));
+        consolidateAndAbsorb(masterPail, new Pail(SHREDDED_DATA_LOCATION));
         newDataPail.deleteSnapshot(snapshotPail);
     }
 
-    private static void consolidateAndAbsord(Pail masterPail, Pail shreddedPail) throws IOException {
+    private static void consolidateAndAbsorb(Pail masterPail, Pail shreddedPail) throws IOException {
         shreddedPail.consolidate();
         masterPail.absorb(shreddedPail);
     }
@@ -180,7 +181,7 @@ public class PailMove {
     public static void initializeUserIdNormalization() {
         Tap equivs = attributeTap(NORMALIZED_URLS_LOCATION, DataUnit._Fields.EQUIV);
 
-        Api.execute(Api.hfsSeqfile("/tmp/swa/equivs0"),
+        Api.execute(Api.hfsSeqfile(HDFS_PATH + "tmp2/swa/equivs0"),
                 new Subquery("?node1", "?node2")
                 .predicate(equivs, "_", "?data")
                 .predicate(new EdgifyEquiv(), "?node1", "?node2")
@@ -206,8 +207,8 @@ public class PailMove {
     }
 
     public static Tap userIdNormalizationIteration(int i) {
-        Tap source = hfsSeqfile("/tmp/swa/equivs" + (i - 1), "source");
-        Tap sink = hfsSeqfile("/tmp/swa/equivs" + i, "sink");
+        Tap source = hfsSeqfile(HDFS_PATH + "tmp2/swa/equivs" + (i - 1), "source");
+        Tap sink = hfsSeqfile(HDFS_PATH + "tmp2/swa/equivs" + i, "sink");
         Subquery iteration = new Subquery("?b1", "?node1", "?node2", "?is-new")
                 .predicate(source, "?n1", "?n2")
                 .predicate(new BidirectionalEdge(), "?n1", "?n2").out("?b1", "?b2")
@@ -219,7 +220,7 @@ public class PailMove {
 
         Api.execute(sink, newEdgeSet);
 
-        Tap progressEdgesSink = hfsSeqfile("/tmp/swa/equivs" + i + "-new", "sink");
+        Tap progressEdgesSink = hfsSeqfile(HDFS_PATH + "tmp2/swa/equivs" + i + "-new", "sink");
         Subquery progressEdges = new Subquery("?node1", "?node2")
                 .predicate(iteration, "?node1", "?node2", true);
 
@@ -242,7 +243,7 @@ public class PailMove {
 
     public static void modifyPageViews(int iter) {
         Tap pageviews = attributeTap(NORMALIZED_URLS_LOCATION, DataUnit._Fields.PAGE_VIEW);
-        Tap newIds = hfsSeqfile("/tmp/swa/equivs" + iter, "source");
+        Tap newIds = hfsSeqfile(HDFS_PATH + "tmp2/swa/equivs" + iter, "source");
         Tap result = splitDataTap(NORMALIZED_PAGEVIEW_LOCATION);
 
         Api.execute(result,
@@ -340,21 +341,16 @@ public class PailMove {
     public static void main(String args[]) throws Exception {
         setApplicationConf();
 
-        LocalFileSystem fs = new LocalFileSystem();
+        //LocalFileSystem fs = new LocalFileSystem();
 
         Pail newDataPail;
         Pail masterPail;
-        if (!fs.exists(new Path(NEW_DATA_LOCATION))) {
-            newDataPail = Pail.create(FileSystem.getLocal(new Configuration()), NEW_DATA_LOCATION, new DataPailStructure());
-        } else {
-            newDataPail = new Pail<Data>(NEW_DATA_LOCATION);
-        }
+        //Pail swaPail;
 
-        if (!fs.exists(new Path(MASTER_DATA_LOCATION))) {
-            masterPail = Pail.create(FileSystem.getLocal(new Configuration()), MASTER_DATA_LOCATION, new SplitDataPailStructure());
-        } else {
-            masterPail = new Pail<Data>(MASTER_DATA_LOCATION);
-        }
+        newDataPail = Pail.create(NEW_DATA_LOCATION, new DataPailStructure(), false);
+
+        masterPail = Pail.create(MASTER_DATA_LOCATION, new SplitDataPailStructure(), false);
+        //swaPail = Pail.create(HDFS_PATH + TEMP_DIR, new SplitDataPailStructure(), false);
 
         Pail.TypedRecordOutputStream out = newDataPail.openWrite();
 
@@ -368,6 +364,14 @@ public class PailMove {
 
         out.writeObject(GenerateData.getPageView(4, "http://www.strona.pl/a.html", 1394310536, 13943105362L));
         out.writeObject(GenerateData.getPageView(4, "http://www.strona.pl/b.html", 1394380944, 13943805352L));
+
+        out.writeObject(GenerateData.getPageView(5, "http://www.strona.pl/c.html", 1394320536, 13943115362L));
+
+        out.writeObject(GenerateData.getPageView(6, "http://www.strona.pl/d.html", 1394420536, 13943125362L));
+
+        out.writeObject(GenerateData.getPageView(7, "http://www.strona.pl/e.html", 1394520536, 13943135362L));
+
+        out.writeObject(GenerateData.getPageView(8, "http://www.strona.pl/f.html", 1394320536, 13943115362L));
 
         out.close();
 

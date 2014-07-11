@@ -5,10 +5,7 @@ import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -34,7 +31,12 @@ public class StreamingQueueToHadoop {
         ConsumerConnector consumerConnector;
         Properties properties = new Properties();
         properties.put("zookeeper.connect", zookeeper);
-        properties.put("group.id", "batchlayer_consumer_group");
+
+
+        //TODO:  without new group, messages are not received.  believe it has to do with the message offset...
+        properties.put("group.id", "group42"); //-" + Math.random() );
+
+        //properties.put("group.id", "group1");
         properties.put("zookeeper.session.timeout.ms", "400");
         properties.put("zookeeper.sync.time.ms", "200");
         properties.put("auto.commit.interval.ms", "1000");

@@ -1,8 +1,10 @@
 package manning.bigdata.kafka;
 
+import com.esotericsoftware.minlog.Log;
 import kafka.producer.KeyedMessage;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.ProducerConfig;
+import org.apache.log4j.Logger;
 import org.json.simple.JSONObject;
 
 import java.text.ParseException;
@@ -17,8 +19,12 @@ import java.util.*;
  * To change this template use File | Settings | File Templates.
  */
 public class StreamingNewDataToQueue {
-    String kafkaServer;
-    String topic;
+    private String kafkaServer;
+    private String topic;
+    private Long timestampStart;
+    private Long timestampEnd;
+    private String batch;
+    private String factType;
     private Producer<String, String> producer;
 
     public StreamingNewDataToQueue(String kafkaServer, String topic) {
@@ -32,27 +38,40 @@ public class StreamingNewDataToQueue {
         SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy|hh:mm:ss");
         Date dateStart = sdf.parse(_dateStart);
         Date dateEnd = sdf.parse(_dateEnd);
-        long timestampStart = dateStart.getTime() / 1000;
-        long timestampEnd = dateEnd.getTime() / 1000;
-        long measureFacts = timestampEnd - timestampStart;
-        long measureTime = 0;
-        long timestampRest;
-        long timestampNext;
+        this.timestampStart = dateStart.getTime() / 1000;
+        this.timestampEnd = dateEnd.getTime() / 1000;
 
-        List<String> facts = new ArrayList<String>();
-        facts = genJSONFacts(timestampStart);
-        for (String fact : facts) {
-            KeyedMessage<String, String> data = new KeyedMessage<String, String>(topic, fact);
-            producer.send(data);
-        }
+        new Thread( new Runnable(){
+                @Override
+                public void run() {
+                    while (true) {
+                        List<String> facts = new ArrayList<String>();
 
-        producer.close();
+                        facts = genJSONFacts(timestampStart);
+                        for (String fact : facts) {
+                            KeyedMessage<String, String> data = new KeyedMessage<String, String>(topic, fact);
+
+                            producer.send(data);
+                        }
+                        timestampStart += 2000;
+                        try {
+                            Thread.sleep(1000);
+                        }catch (Exception e) {
+                            //Logger.getLogger()
+                            System.out.println(e.getStackTrace());
+                        }
+                    }
+                }
+            }
+
+        ).start();
+
     }
 
     private List<String> genJSONFacts(long timestampStart) {
 
         List<String> messages = new ArrayList<String>();
-        int personCount = 10;
+        int personCount = 1;
         messages.addAll(genJSONPersons(timestampStart, personCount));
 
         return messages;
@@ -101,9 +120,7 @@ public class StreamingNewDataToQueue {
 
         props.put("metadata.broker.list", this.kafkaServer);
         props.put("serializer.class", "kafka.serializer.StringEncoder");
-//        props.put("partitioner.class", "example.producer.SimplePartitioner");
         props.put("request.required.acks", "1");
-
 
         ProducerConfig config = new ProducerConfig(props);
         producer = new Producer<String, String>(config);
@@ -111,4 +128,6 @@ public class StreamingNewDataToQueue {
 
 
     }
+
+
 }
