@@ -23,7 +23,7 @@
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>clojure</artifactId>
-            <version>1.6.0</version>
+            <version>1.5.1</version>
         </dependency>
         <dependency>
             <groupId>cascalog</groupId>
@@ -55,8 +55,11 @@
             <artifactId>hadoop-core</artifactId>
             <version>${hadoopVersion}</version>
         </dependency>
-
-
+        <dependency>
+            <groupId>com.esotericsoftware.kryo</groupId>
+            <artifactId>kryo</artifactId>
+            <version>2.22</version>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -77,7 +80,7 @@
         <dependency>
             <groupId>backtype</groupId>
             <artifactId>cascading-thrift</artifactId>
-            <version>0.2.3</version>
+            <version>0.2.5</version>
         </dependency>
         <dependency>
             <groupId>com.backtype</groupId>

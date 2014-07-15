@@ -68,10 +68,9 @@ public class KafkaToHDFSBolt extends BaseRichBolt {
             ioe.printStackTrace();
             System.exit(0);
         }
-        AggregatorThread oldThread = thread;
+        //thread.workRemains = false;
         thread = new AggregatorThread(queue, output);
         thread.start();
-        oldThread.workRemains = false;
     }
 
     @Override
