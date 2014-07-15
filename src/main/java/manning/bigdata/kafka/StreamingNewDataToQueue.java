@@ -53,7 +53,7 @@ public class StreamingNewDataToQueue {
 
                             producer.send(data);
                         }
-                        timestampStart += 2000;
+                        timestampStart += 1000;
                         try {
                             Thread.sleep(1000);
                         }catch (Exception e) {

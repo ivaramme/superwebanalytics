@@ -13,7 +13,7 @@ import java.text.ParseException;
  */
 public class StreamDataToQueue {
     public static void main(String[] args) throws ParseException {
-        String kafkaServer = "localhost:9092";
+        String kafkaServer = System.getenv("KAFKA_URL");
         String topic = "swa";
 
         StreamingNewDataToQueue streaming = new StreamingNewDataToQueue(kafkaServer, topic);

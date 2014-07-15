@@ -4,6 +4,8 @@ import manning.bigdata.ch3.PailMove;
 import manning.bigdata.kafka.StreamingNewDataToQueue;
 import manning.bigdata.kafka.StreamingQueueToHadoop;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.ParseException;
 
 /**
@@ -15,20 +17,39 @@ public class StreamQueueToHadoop {
         String topic = "swa";
 
         int threads = 3;
-        String hdfsPath = "hdfs://10.200.1.100:9000/tmp/newData5"; //PailMove.NEW_DATA_LOCATION;
 
-//copy from StreamDataToQueue.main()
+        String zookeeperURL;
+        try {
+            zookeeperURL = System.getenv("ZOOKEEPER_URL");
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid zookeeper Path: " + e.toString());
+        }
 
-        String kafkaServer = "localhost:9092";
+        String hdfsURL;
+        try {
+            hdfsURL = System.getenv("HDFS_URL");
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid hdfs Path");
+        }
 
-        StreamingNewDataToQueue streamingNewDataToQueue = new StreamingNewDataToQueue(kafkaServer, topic);
+        String kafkaURL;
+        try {
+            kafkaURL = System.getenv("KAFKA_URL");
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid kafka Path");
+        }
+
+        String hdfsPath = hdfsURL + "/tmp/newData5";
+        String kafkaPath = kafkaURL;
+
+        StreamingNewDataToQueue streamingNewDataToQueue = new StreamingNewDataToQueue(kafkaPath, topic);
         String dateStart = "01.01.2014|10:20:20";
         String dateEnd = "01.01.2015|10:20:20";
         String batch = "";
         String factType = "";
         streamingNewDataToQueue.generateAndStreamingDataToQueue(dateStart, dateEnd, batch, factType);
 
-        StreamingQueueToHadoop streaming = new StreamingQueueToHadoop(hdfsPath, zookeeper, topic, threads);
+        StreamingQueueToHadoop streaming = new StreamingQueueToHadoop(hdfsPath, zookeeperURL, topic, threads);
         streaming.startStreaming();
 
     }
