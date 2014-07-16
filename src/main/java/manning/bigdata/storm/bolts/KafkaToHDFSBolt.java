@@ -12,6 +12,7 @@ import com.backtype.hadoop.pail.PailStructure;
 import com.google.common.reflect.TypeToken;
 import manning.bigdata.ch3.DataPailStructure;
 import manning.bigdata.swa.*;
+import manning.bigdata.util.DataDecoder;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.json.simple.JSONObject;
@@ -46,19 +47,22 @@ public class KafkaToHDFSBolt extends BaseRichBolt {
     public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
         this.collector = collector;
         newBucket();
+
+        //thread.workRemains = false;
+        thread = new AggregatorThread(queue, output);
+        thread.start();
     }
 
     private void newBucket(){
-        try
-        {
-            output.close();
+        if(output != null) {
+            try {
+                output.close();
+            } catch (Exception e) {
+                System.out.println("no output to close");
+            }
         }
-        catch(Exception e)
-        {
-            System.out.println("no output to close");
-        }
-        try {
 
+        try {
             String dirName = DateTimeFormat.forPattern("yyyyMMddHHmmss")
                     .print(new DateTime());
             output = Pail.create(path + "/" + dirName, structure, false).openWrite();
@@ -68,9 +72,6 @@ public class KafkaToHDFSBolt extends BaseRichBolt {
             ioe.printStackTrace();
             System.exit(0);
         }
-        //thread.workRemains = false;
-        thread = new AggregatorThread(queue, output);
-        thread.start();
     }
 
     @Override
@@ -97,89 +98,6 @@ public class KafkaToHDFSBolt extends BaseRichBolt {
     }
 
 
-    private Data decodeJsonMessage(JSONObject jsonObject, String messageType) {
-        Data data = null;
-
-        if (messageType.equals("page")) {
-            data = decodePage(jsonObject);
-        } else if (messageType.equals("person")) {
-            data = decodePerson(jsonObject);
-        } else if (messageType.equals("equiv")) {
-            data = decodeEquiv(jsonObject);
-        } else if (messageType.equals("pageview")) {
-            data = decodePageView(jsonObject);
-        }
-        return data;
-    }
-
-    private Data decodePage(JSONObject jsonObject) {
-        String pedigree = (String) jsonObject.get("pedigree");
-        String url = (String) jsonObject.get("url");
-        return null;
-    }
-
-    private Data decodePerson(JSONObject jsonObject) {
-        System.out.println(jsonObject);
-        String pedigree = (String) jsonObject.get("pedigree");
-        String personId = (String) jsonObject.get("personid");
-        String gender = (String) jsonObject.get("gender");
-
-        GenderType genderType = null;
-        if (gender.equals("MALE")) {
-            genderType = GenderType.MALE;
-        } else {
-            genderType = GenderType.FEMALE;
-        }
-
-        String fullname = (String) jsonObject.get("fullname");
-        String city = (String) jsonObject.get("city");
-        String state = (String) jsonObject.get("state");
-        String country = (String) jsonObject.get("country");
-
-        PersonID personID = new PersonID();
-        if (personId.startsWith("cookie")) {
-            personID.setCookie(personId);
-        } else {
-            personID.setUser_id(Long.parseLong(personId));
-        }
-
-        PersonPropertyValue personPropertyValue = new PersonPropertyValue();
-        Location location = new Location();
-        location.setCity(city);
-        location.setState(state);
-        location.setCountry(country);
-        personPropertyValue.setGender(genderType);
-        personPropertyValue.setLocation(location);
-        personPropertyValue.setFull_name(fullname);
-
-        PersonProperty personProperty = new PersonProperty();
-        personProperty.setProperty(personPropertyValue);
-        personProperty.setId(personID);
-
-        DataUnit dataUnit = new DataUnit();
-        dataUnit.setPerson_property(personProperty);
-
-        return getData(pedigree, dataUnit);
-    }
-
-    private Data getData(String timestamp, DataUnit dataUnit) {
-        Pedigree pedigree = new Pedigree();
-        pedigree.setTrue_as_of_secs(Integer.parseInt(timestamp));
-
-        Data data = new Data();
-        data.setPedigree(pedigree);
-        data.setDataunit(dataUnit);
-
-        return data;
-    }
-
-    private Data decodeEquiv(JSONObject jsonObject) {
-        return null;  //To change body of created methods use File | Settings | File Templates.
-    }
-
-    private Data decodePageView(JSONObject jsonObject) {
-        return null;
-    }
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
 
@@ -246,7 +164,7 @@ public class KafkaToHDFSBolt extends BaseRichBolt {
             JSONObject jsonObject = (JSONObject) obj;
             String messageType = (String) jsonObject.get("messagetype");
 
-            Data data = decodeJsonMessage(jsonObject, messageType);
+            Data data = DataDecoder.decodeJsonMessage(jsonObject, messageType);
             output.writeObject(data);
 
         }

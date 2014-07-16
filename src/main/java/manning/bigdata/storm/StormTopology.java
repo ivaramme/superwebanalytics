@@ -47,7 +47,7 @@ public class StormTopology {
         SpoutConfig kSpoutConf = new SpoutConfig(brokerHosts, "swa", "/var/lib/zookeeper", "storm-test");
 
         builder.setSpout("source", new KafkaSpout(kSpoutConf));
-        builder.setBolt("sink", new KafkaToHDFSBolt(hdfsURL + "/tmp/storm-test"));
+        builder.setBolt("sink", new KafkaToHDFSBolt(hdfsURL + "/tmp/storm-test")).shuffleGrouping("source");
 
         LocalCluster cluster = new LocalCluster();
         Config conf = new Config();
