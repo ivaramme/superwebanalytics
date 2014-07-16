@@ -34,7 +34,7 @@ public class StreamingQueueToHadoop {
 
 
         //TODO:  without new group, messages are not received.  believe it has to do with the message offset...
-        //properties.put("group.id", "group42"); //-" + Math.random() );
+        properties.put("group.id", "group42"); //-" + Math.random() );
 
         //properties.put("group.id", "group1");
         properties.put("zookeeper.session.timeout.ms", "400");

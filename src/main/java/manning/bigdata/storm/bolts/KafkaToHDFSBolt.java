@@ -34,8 +34,7 @@ public class KafkaToHDFSBolt extends BaseRichBolt {
     private final PailStructure structure =  new DataPailStructure();
     private final BlockingQueue<String> queue;
     private OutputCollector collector;
-    private Pail<Data>.TypedRecordOutputStream output;
-    private AggregatorThread thread;
+    private Pail<Data>.TypedRecordOutputStream output = null;
 
     public KafkaToHDFSBolt(String path) {
         System.out.println("HDFSThriftBolt hdfsPath = " + path);
@@ -47,53 +46,59 @@ public class KafkaToHDFSBolt extends BaseRichBolt {
     public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
         this.collector = collector;
         newBucket();
-
-        //thread.workRemains = false;
-        thread = new AggregatorThread(queue, output);
-        thread.start();
     }
-
+    /*
+     * Create new Pail & output stream on 
+     */
     private void newBucket(){
         if(output != null) {
             try {
                 output.close();
             } catch (Exception e) {
-                System.out.println("no output to close");
-            }
-        }
+                System.out.println("no output to close"); }}
 
         try {
-            String dirName = DateTimeFormat.forPattern("yyyyMMddHHmmss")
+            String dirName = DateTimeFormat.forPattern("yyyyMMddHHmm")
                     .print(new DateTime());
-            output = Pail.create(path + "/" + dirName, structure, false).openWrite();
+            Pail pail = Pail.create(path + "/" + dirName, structure, false);
+
+            output = pail.openWrite();
 
         } catch(IOException ioe){
             System.out.println("Unable to use Pail to write data: " + ioe.getMessage());
-            ioe.printStackTrace();
             System.exit(0);
         }
     }
 
     @Override
     public void execute(Tuple input) {
-        boolean flush = false;
-        if(input.getSourceStreamId().equals(
-                Constants.SYSTEM_TICK_STREAM_ID)) {
-            flush = true;
-        } else {
-            System.out.println("Received new tuple");
-            // Differ parsing and object creation to a separate thread
-            queue.offer(input.getString(0));
-            collector.ack(input);
-        }
-        // close, forcing write to disk:
-        if(flush) try {
-            System.out.println("flushing to hdfs");
-            output.close();
+        if(input.getSourceStreamId().equals( Constants.SYSTEM_TICK_STREAM_ID )) {
             newBucket();
 
-        } catch (IOException e) {
-            e.printStackTrace();
+        } else {
+            System.out.println("Received new tuple");
+            //Convert bytes to string:
+            byte[] valueBytes = (byte[]) input.getValueByField("bytes");
+            String message = new String(valueBytes);
+
+            try {
+                JSONParser parser = new JSONParser();
+                Object obj = parser.parse(message);
+                JSONObject jsonObject = (JSONObject) obj;
+                String messageType = (String) jsonObject.get("messagetype");
+
+                Data data = DataDecoder.decodeJsonMessage(jsonObject, messageType);
+
+                output.writeObject(data);
+
+            } catch (ParseException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            //Acknowledge receipt of tuple
+            collector.ack(input);
         }
     }
 
@@ -125,48 +130,5 @@ public class KafkaToHDFSBolt extends BaseRichBolt {
         return conf;
     }
 
-    class AggregatorThread extends Thread {
-        private final BlockingQueue<String> queue;
-        private final Pail<Data>.TypedRecordOutputStream output;
-        public Boolean workRemains = true;
 
-        public AggregatorThread(BlockingQueue<String> queue, Pail<Data>.TypedRecordOutputStream output) {
-            this.queue = queue;
-            this.output = output;
-        }
-
-        public void run() {
-            String message = "";
-            Type stringStringMap = new TypeToken<Map<String, Object>>() {}.getType();
-
-            // block until there are messages available
-            while (workRemains) {
-                try {
-                    message = queue.take();
-                    System.out.println("Processing new message: " + message);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-                try {
-                    writeToHadoop(message);
-                } catch (ParseException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-            }
-        }
-        private void writeToHadoop(String jsonMessages) throws ParseException, IOException {
-            JSONParser parser = new JSONParser();
-            Object obj = parser.parse(jsonMessages);
-            JSONObject jsonObject = (JSONObject) obj;
-            String messageType = (String) jsonObject.get("messagetype");
-
-            Data data = DataDecoder.decodeJsonMessage(jsonObject, messageType);
-            output.writeObject(data);
-
-        }
-    }
 }

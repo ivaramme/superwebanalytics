@@ -3,8 +3,10 @@ package manning.bigdata.storm;
 
 import backtype.storm.Config;
 import backtype.storm.LocalCluster;
+import backtype.storm.spout.RawMultiScheme;
 import backtype.storm.topology.TopologyBuilder;
 
+import manning.bigdata.kafka.StreamingNewDataToQueue;
 import manning.bigdata.storm.bolts.KafkaToHDFSBolt;
 
 import storm.kafka.BrokerHosts;
@@ -12,6 +14,7 @@ import storm.kafka.KafkaSpout;
 import storm.kafka.SpoutConfig;
 import storm.kafka.ZkHosts;
 
+import java.text.ParseException;
 
 
 /**
@@ -45,6 +48,7 @@ public class StormTopology {
 
         BrokerHosts brokerHosts = new ZkHosts(zookeeperURL);
         SpoutConfig kSpoutConf = new SpoutConfig(brokerHosts, "swa", "/var/lib/zookeeper", "storm-test");
+        kSpoutConf.scheme = new RawMultiScheme();
 
         builder.setSpout("source", new KafkaSpout(kSpoutConf));
         builder.setBolt("sink", new KafkaToHDFSBolt(hdfsURL + "/tmp/storm-test")).shuffleGrouping("source");
@@ -54,6 +58,23 @@ public class StormTopology {
         conf.setDebug(true);
         cluster.submitTopology("pageview-test", conf, builder.createTopology());
         System.out.println("Storm cluster started");
+
+        String kafkaServer = System.getenv("KAFKA_URL");
+        String topic = "swa";
+
+        //start streaming
+        StreamingNewDataToQueue streaming = new StreamingNewDataToQueue(kafkaServer, topic);
+        String dateStart = "01.01.2013|10:20:20";
+        String dateEnd = "01.01.2014|10:20:20";
+        String batch = "";
+        String factType = "";
+
+        try {
+            streaming.generateAndStreamingDataToQueue(dateStart, dateEnd, batch, factType);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
 
     }
 }

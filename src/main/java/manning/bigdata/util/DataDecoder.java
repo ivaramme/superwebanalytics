@@ -31,7 +31,7 @@ public class DataDecoder {
     }
 
     private static Data decodePerson(JSONObject jsonObject) {
-        System.out.println(jsonObject);
+        System.out.println("Decoding Person: " + jsonObject);
         String pedigree = (String) jsonObject.get("pedigree");
         String personId = (String) jsonObject.get("personid");
         String gender = (String) jsonObject.get("gender");
