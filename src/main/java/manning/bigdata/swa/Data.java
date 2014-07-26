@@ -6,26 +6,13 @@
  */
 package manning.bigdata.swa;
 
+import org.apache.thrift.protocol.TTupleProtocol;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
-
 import org.apache.thrift.scheme.TupleScheme;
-import org.apache.thrift.protocol.TTupleProtocol;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.EnumMap;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.EnumSet;
-import java.util.Collections;
-import java.util.BitSet;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import java.util.*;
 
 public class Data implements org.apache.thrift.TBase<Data, Data._Fields>, java.io.Serializable, Cloneable {
     private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("Data");
@@ -41,6 +28,7 @@ public class Data implements org.apache.thrift.TBase<Data, Data._Fields>, java.i
 
     public Pedigree pedigree; // required
     public DataUnit dataunit; // required
+    public boolean deserializing;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -116,6 +104,7 @@ public class Data implements org.apache.thrift.TBase<Data, Data._Fields>, java.i
     }
 
     public Data() {
+        deserializing = true;
     }
 
     public Data(
@@ -125,6 +114,7 @@ public class Data implements org.apache.thrift.TBase<Data, Data._Fields>, java.i
         this();
         this.pedigree = pedigree;
         this.dataunit = dataunit;
+        deserializing = false;
     }
 
     /**
@@ -352,6 +342,8 @@ public class Data implements org.apache.thrift.TBase<Data, Data._Fields>, java.i
     }
 
     public void validate() throws org.apache.thrift.TException {
+        if(deserializing)
+            return;
         // check for required fields
         if (pedigree == null) {
             throw new org.apache.thrift.protocol.TProtocolException("Required field 'pedigree' was not present! Struct: " + toString());
