@@ -27,6 +27,7 @@ public class GenderCountMap extends MapReduceBase implements Mapper<Text, BytesW
     private Text name = new Text();
     private final PailStructure structure =  new DataPailStructure();
     private Data data;
+    private int processedItems = 0;
 
     /**
      *
@@ -49,6 +50,13 @@ public class GenderCountMap extends MapReduceBase implements Mapper<Text, BytesW
         if(0 == _name.length())
             return;
 
+        processedItems += 1;
+
+        // Just to add some randomness as current data is only showing one name
+        if((processedItems % 10) == 0){
+            _name = _name + "post_fix";
+        }
+
         name.set(_name); // Set the String value to the 'TEXT' instance
         output.collect(name, ONE);
     }
@@ -67,15 +75,19 @@ public class GenderCountMap extends MapReduceBase implements Mapper<Text, BytesW
         conf.setOutputValueClass(IntWritable.class);
 
         conf.setMapperClass(GenderCountMap.class);
-        //conf.setCombinerClass(Reduce.class);
-        //conf.setReducerClass(Reduce.class);
+        conf.setCombinerClass(GenderCountReduce.class);
+        conf.setReducerClass(GenderCountReduce.class);
 
         conf.setInputFormat(SequenceFileFormat.SequenceFilePailInputFormat.class);
         conf.setOutputFormat(TextOutputFormat.class);
 
         // Split data files
+        // **********************************************************
         // Using SequenceFileInputFormat as this is binary content
-        // SequenceFileInputFormat
+        // TODO: need to fix this: The SequenceFilePailInputFormat doesn't go through child directories contrary
+        // to what SequenceFileInputFormat does (you can point to the parent directory and the the * wildcard to
+        // explore all subdirectories)
+        // **********************************************************
         SequenceFileFormat.SequenceFilePailInputFormat.setInputPathFilter(conf, PailFilter.class);
         SequenceFileFormat.SequenceFilePailInputFormat.setInputPaths(conf, new Path(hdfsURL + "/tmp/storm-test/201407252308")); // '*' is needed to go inside subdirectories
         FileOutputFormat.setOutputPath(conf, new Path(hdfsURL + "/tmp/output/"+System.currentTimeMillis()));
@@ -97,11 +109,3 @@ class PailFilter extends Configured implements PathFilter {
         return true;
     }
 }
-
-/*
-public class GenderCountReduce extends MapReduceBase implements Reducer<Text, IntWritable, Text, IntWritable> {
-    public void reduce(Text key, Iterator<IntWritable> values, OutputCollector<Text, IntWritable> output, Reporter reporter) throws IOException {
-
-    }
-}
-*/
