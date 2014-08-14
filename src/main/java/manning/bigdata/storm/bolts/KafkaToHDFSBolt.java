@@ -9,9 +9,8 @@ import backtype.storm.topology.base.BaseRichBolt;
 import backtype.storm.tuple.Tuple;
 import com.backtype.hadoop.pail.Pail;
 import com.backtype.hadoop.pail.PailStructure;
-import com.google.common.reflect.TypeToken;
 import manning.bigdata.ch3.DataPailStructure;
-import manning.bigdata.swa.*;
+import manning.bigdata.swa.Data;
 import manning.bigdata.util.DataDecoder;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -20,7 +19,7 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -87,9 +86,11 @@ public class KafkaToHDFSBolt extends BaseRichBolt {
                 JSONObject jsonObject = (JSONObject) obj;
                 String messageType = (String) jsonObject.get("messagetype");
 
-                Data data = DataDecoder.decodeJsonMessage(jsonObject, messageType);
+                List<Data> decodedResults = DataDecoder.decodePerson(jsonObject);//DataDecoder.decodeJsonMessage(jsonObject, messageType);
 
-                output.writeObject(data);
+                for(Data data : decodedResults) {
+                    output.writeObject(data);
+                }
 
             } catch (ParseException e) {
                 e.printStackTrace();

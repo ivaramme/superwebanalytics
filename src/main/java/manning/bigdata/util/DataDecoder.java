@@ -3,6 +3,9 @@ package manning.bigdata.util;
 import manning.bigdata.swa.*;
 import org.json.simple.JSONObject;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created with IntelliJ IDEA.
  * User: ivaramme
@@ -14,9 +17,9 @@ public class DataDecoder {
 
         if (messageType.equals("page")) {
             data = decodePage(jsonObject);
-        } else if (messageType.equals("person")) {
+        } /* else if (messageType.equals("person")) {
             data = decodePerson(jsonObject);
-        } else if (messageType.equals("equiv")) {
+        }*/ else if (messageType.equals("equiv")) {
             data = decodeEquiv(jsonObject);
         } else if (messageType.equals("pageview")) {
             data = decodePageView(jsonObject);
@@ -30,7 +33,9 @@ public class DataDecoder {
         return null;
     }
 
-    private static Data decodePerson(JSONObject jsonObject) {
+    public static List<Data> decodePerson(JSONObject jsonObject) {
+        List<Data> res = new ArrayList<Data>();
+
         System.out.println("Decoding Person: " + jsonObject);
         String pedigree = (String) jsonObject.get("pedigree");
         String personId = (String) jsonObject.get("personid");
@@ -55,23 +60,40 @@ public class DataDecoder {
             personID.setUser_id(Long.parseLong(personId));
         }
 
+        DataUnit dataUnit = new DataUnit();
+        PersonProperty personProperty = new PersonProperty();
         PersonPropertyValue personPropertyValue = new PersonPropertyValue();
+
         Location location = new Location();
         location.setCity(city);
         location.setState(state);
         location.setCountry(country);
-        personPropertyValue.setGender(genderType);
-        personPropertyValue.setLocation(location);
-        personPropertyValue.setFull_name(fullname);
 
-        PersonProperty personProperty = new PersonProperty();
+        personPropertyValue.setLocation(location);
         personProperty.setProperty(personPropertyValue);
         personProperty.setId(personID);
-
-        DataUnit dataUnit = new DataUnit();
         dataUnit.setPerson_property(personProperty);
+        res.add(getData(pedigree, dataUnit));
 
-        return getData(pedigree, dataUnit);
+        personProperty = new PersonProperty();
+        personPropertyValue = new PersonPropertyValue();
+        personPropertyValue.setGender(genderType);
+        personProperty.setProperty(personPropertyValue);
+        personProperty.setId(personID);
+        dataUnit = new DataUnit();
+        dataUnit.setPerson_property(personProperty);
+        res.add(getData(pedigree, dataUnit));
+
+        personProperty = new PersonProperty();
+        personPropertyValue = new PersonPropertyValue();
+        personPropertyValue.setFull_name(fullname);
+        personProperty.setProperty(personPropertyValue);
+        personProperty.setId(personID);
+        dataUnit = new DataUnit();
+        dataUnit.setPerson_property(personProperty);
+        res.add(getData(pedigree, dataUnit));
+
+        return res;
     }
 
     private static Data getData(String timestamp, DataUnit dataUnit) {
