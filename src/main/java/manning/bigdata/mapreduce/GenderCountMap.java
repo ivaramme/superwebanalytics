@@ -1,19 +1,16 @@
 package manning.bigdata.mapreduce;
 
 
-import com.backtype.hadoop.pail.PailStructure;
 import com.backtype.hadoop.pail.SequenceFileFormat;
-import manning.bigdata.ch3.DataPailStructure;
-import manning.bigdata.swa.Data;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.*;
-
-import java.io.IOException;
+import org.apache.hadoop.mapred.FileOutputFormat;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.TextOutputFormat;
 
 /**
  * User: ivaramme
@@ -22,44 +19,7 @@ import java.io.IOException;
  * Maps are the individual tasks that transform input records into intermediate records. The transformed intermediate
  * records do not need to be of the same type as the input records. A given input pair may map to zero or many output pairs.
  */
-public class GenderCountMap extends MapReduceBase implements Mapper<Text, BytesWritable, Text, IntWritable> {
-    private final static IntWritable ONE = new IntWritable(1);
-    private Text name = new Text();
-    private final PailStructure structure =  new DataPailStructure();
-    private Data data;
-    private int processedItems = 0;
-
-    /**
-     *
-     * @param key
-     * @param value the input value. Can be different from the output type
-     * @param output collects mapped keys and values.
-     * @param reporter reports status of the task
-     * @throws IOException
-     */
-    public void map(Text key, BytesWritable value, OutputCollector<Text, IntWritable> output, Reporter reporter) throws IOException {
-        String _name = "";
-        try {
-            // Deserialize raw data coming from HDFS using the structure
-            data = (Data) structure.deserialize(value.getBytes());
-            _name = data.getDataunit().getPerson_property().getProperty().getFull_name();;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        if(0 == _name.length())
-            return;
-
-        processedItems += 1;
-
-        // Just to add some randomness as current data is only showing one name
-        if((processedItems % 10) == 0){
-            _name = _name + "post_fix";
-        }
-
-        name.set(_name); // Set the String value to the 'TEXT' instance
-        output.collect(name, ONE);
-    }
+public class GenderCountMap {
 
     public static void main(String[] args) throws Exception {
         String hdfsURL;
@@ -69,14 +29,14 @@ public class GenderCountMap extends MapReduceBase implements Mapper<Text, BytesW
             throw new RuntimeException("Invalid hdfs Path");
         }
 
-        JobConf conf = new JobConf(GenderCountMap.class);
+        JobConf conf = new JobConf(GenderMap.class);
         conf.setJobName("genderCount");
         conf.setOutputKeyClass(Text.class);
         conf.setOutputValueClass(IntWritable.class);
 
-        conf.setMapperClass(GenderCountMap.class);
-        conf.setCombinerClass(GenderCountReduce.class);
-        conf.setReducerClass(GenderCountReduce.class);
+        conf.setMapperClass(GenderMap.class);
+        conf.setCombinerClass(GenderReduce.class);
+        conf.setReducerClass(GenderReduce.class);
 
         conf.setInputFormat(SequenceFileFormat.SequenceFilePailInputFormat.class);
         conf.setOutputFormat(TextOutputFormat.class);
@@ -89,7 +49,7 @@ public class GenderCountMap extends MapReduceBase implements Mapper<Text, BytesW
         // explore all subdirectories)
         // **********************************************************
         SequenceFileFormat.SequenceFilePailInputFormat.setInputPathFilter(conf, PailFilter.class);
-        SequenceFileFormat.SequenceFilePailInputFormat.setInputPaths(conf, new Path(hdfsURL + "/tmp/storm-test/201407252308")); // '*' is needed to go inside subdirectories
+        SequenceFileFormat.SequenceFilePailInputFormat.setInputPaths(conf, new Path(hdfsURL + "/tmp/storm-test/201408140013")); // '*' is needed to go inside subdirectories
         FileOutputFormat.setOutputPath(conf, new Path(hdfsURL + "/tmp/output/"+System.currentTimeMillis()));
 
         JobClient.runJob(conf);

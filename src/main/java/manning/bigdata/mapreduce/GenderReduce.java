@@ -14,7 +14,7 @@ import java.util.Iterator;
  * User: ivaramme
  * Date: 8/6/14
  */
-public class GenderCountReduce/*<K extends WritableComparable, V extends Writable>*/ extends MapReduceBase implements Reducer<Text, IntWritable, Text, IntWritable> {
+public class GenderReduce/*<K extends WritableComparable, V extends Writable>*/ extends MapReduceBase implements Reducer<Text, IntWritable, Text, IntWritable> {
     /**
      *
      * @param key

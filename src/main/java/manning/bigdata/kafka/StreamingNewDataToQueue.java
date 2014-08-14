@@ -1,10 +1,8 @@
 package manning.bigdata.kafka;
 
-import com.esotericsoftware.minlog.Log;
-import kafka.producer.KeyedMessage;
 import kafka.javaapi.producer.Producer;
+import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
-import org.apache.log4j.Logger;
 import org.json.simple.JSONObject;
 
 import java.text.ParseException;
@@ -89,7 +87,7 @@ public class StreamingNewDataToQueue {
             jsonObject.put("pedigree", Long.toString(timestampStart));
             jsonObject.put("personid", "cookie_" + i);
             jsonObject.put("gender", gender[random.nextInt(2)]);
-            jsonObject.put("fullname", "Piotr Belina");
+            jsonObject.put("fullname", "Piotr Belina " + random.nextInt(5));
             jsonObject.put("city", "Sopot");
             jsonObject.put("state", "Sopot");
             jsonObject.put("country", "Poland");
