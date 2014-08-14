@@ -43,6 +43,7 @@ public class GenderMap extends MapReduceBase implements Mapper<Text, BytesWritab
             property = data.getDataunit().getPerson_property();
 
             System.out.println(property.getProperty().getSetField().getFieldName());
+            System.out.println(property.getId());
             if(property.getProperty().isSetGender()) {
                 _gender = data.getDataunit().getPerson_property().getProperty().getGender().getValue() == 1 ? "MALE" : "FEMALE";
             }

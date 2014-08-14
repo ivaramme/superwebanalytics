@@ -24,6 +24,7 @@ public class StreamingNewDataToQueue {
     private String batch;
     private String factType;
     private Producer<String, String> producer;
+    private int personCounter = 0;
 
     public StreamingNewDataToQueue(String kafkaServer, String topic) {
         this.kafkaServer = kafkaServer;
@@ -85,7 +86,7 @@ public class StreamingNewDataToQueue {
         for (int i = 1; i <= personCount; i++) {
             jsonObject.put("messagetype", "person");
             jsonObject.put("pedigree", Long.toString(timestampStart));
-            jsonObject.put("personid", "cookie_" + i);
+            jsonObject.put("personid", "cookie_" + personCounter);
             jsonObject.put("gender", gender[random.nextInt(2)]);
             jsonObject.put("fullname", "Piotr Belina " + random.nextInt(5));
             jsonObject.put("city", "Sopot");
@@ -97,7 +98,7 @@ public class StreamingNewDataToQueue {
 
             jsonObject.put("messagetype", "person");
             jsonObject.put("pedigree", Long.toString(timestampStart));
-            jsonObject.put("personid", "" + i);
+            jsonObject.put("personid", "" + personCounter);
             jsonObject.put("gender", gender[random.nextInt(2)]);
             jsonObject.put("fullname", "Piotr Belina");
             jsonObject.put("city", "Sopot");
@@ -108,6 +109,7 @@ public class StreamingNewDataToQueue {
             jsonObject.clear();
 
             timestampStart++;
+            personCounter++;
         }
 
         return people;
